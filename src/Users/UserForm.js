@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { Button, Container, Grid, TextField, TextareaAutosize, Typography, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel, Box } from '@mui/material';
 import axios from 'axios';
@@ -31,8 +31,9 @@ const AppRouter = () => {
     } catch (error) {
       console.error('Error submitting the form. Please try again later.');
     }
+    
   };
-
+  
   
 
   return (
@@ -44,10 +45,44 @@ const AppRouter = () => {
   );
 };
 
-const AppForm = ({ handleSubmit, control, errors, onSubmit, reset }) => {
-    
+
+const AppForm = ({ handleSubmit, control, errors, onSubmit, reset, onExcelFileChange, onExcelUpload  }) => {
+  const nav = useNavigate();
+  const [fileData, setFileData] = useState(null);
+
     const alphabeticRegex = /^[A-Za-z]+$/;
   const digitRegex = /^[0-9]*$/;
+  const onFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setFileData(file);
+    }
+  };
+
+  const onFileUpload = async () => {
+    try {
+      if (!fileData) {
+        console.error('No file selected.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', fileData);
+
+      // Send the formData to the backend for processing
+      const response = await axios.post(`http://localhost:8080/api/users/upload`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      console.log('File uploaded successfully!', response.data);
+      alert('File Uploaded Successfully!')
+      nav('/list');
+    } catch (error) {
+      console.error('Error uploading the file:', error);
+      alert('Error while Uploadig File!')
+    }
+  };
+  
 
     return (
     
@@ -160,20 +195,29 @@ const AppForm = ({ handleSubmit, control, errors, onSubmit, reset }) => {
               />
             </FormControl>
             {errors.gender && <p style={{ color: 'red' }}>{errors.gender.message}</p>}
-    
+            
             <Box mt={2} display="flex" justifyContent="flex-end">
+            <Box mr={2}>
             <Link to="/list"><Button type="submit" variant="contained" color="primary" onClick={handleSubmit(onSubmit)}>
                 Submit
                 
               </Button></Link>
+              </Box>
               <Button type="button" variant="contained" color="secondary" onClick={() => reset()}>
                 Reset
               </Button>
             </Box>
+            <Box mt={4}>
+              <input type="file" onChange={onFileChange} /></Box>
+              <Box mt={4}>
+            <Link to="/list"><Button variant="contained" color="primary" onClick={onFileUpload}>
+          Upload Excel
+        </Button></Link></Box>
           </form>
           
     
         </Container>
       );
     };
+    
     export default AppRouter;
