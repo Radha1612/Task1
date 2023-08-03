@@ -4,7 +4,11 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { env } from '../constant';
+//import XLSX from 'xlsx';
 import {TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography } from '@mui/material';
+// import { write as exportToExcel } from 'xlsx';
+// import XLSX from 'xlsx-style';
+import * as ExcelJS from 'exceljs';
 
 const UserList = () => {
  
@@ -49,6 +53,78 @@ const handleSearch = async () => {
   }
 };
 
+const handleDownloadExcel = async () => {
+  try {
+    // Function to convert the users data to Excel format
+    const data = users.map((user) => ({
+      firstName: user.firstName,
+      lastName: user.lastName,
+      address: user.address,
+      mobileNumber: user.mobileNumber,
+      gender: user.gender,
+    }));
+
+    // Create a new workbook
+    const workbook = new ExcelJS.Workbook();
+
+    // Add a worksheet to the workbook
+    const worksheet = workbook.addWorksheet('Users');
+
+    // Define the columns and their headers
+    worksheet.columns = [
+      { header: 'First Name', key: 'firstName', width: 15 },
+      { header: 'Last Name', key: 'lastName', width: 15 },
+      { header: 'Address', key: 'address', width: 30 },
+      { header: 'Mobile Number', key: 'mobileNumber', width: 15 },
+      { header: 'Gender', key: 'gender', width: 10 },
+    ];
+
+    // Populate the data rows
+    data.forEach((user) => {
+      worksheet.addRow(user);
+    });
+
+    // Generate the buffer containing the Excel data
+    const excelBuffer = await workbook.xlsx.writeBuffer();
+
+    // Create a Blob from the Excel buffer
+    const blob = new Blob([excelBuffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+
+    // Create a URL for the Blob
+    const url = URL.createObjectURL(blob);
+
+    // Create a link and trigger the download
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'users_data.xlsx';
+    link.click();
+  } catch (error) {
+    console.error('Error exporting to Excel:', error);
+  }
+};
+const handleFileUpload = async (event) => {
+  const file = event.target.files[0];
+  const formData = new FormData();
+  formData.append('file', file);
+  
+
+  try {
+    const response = await axios.post(`${env}/users/upload`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    // Refresh the user list after successful file upload
+    setUsers(response.data);
+  } catch (error) {
+    console.error('Error uploading the file:', error);
+  }
+};
+
+
   return (
     <div>
       <Typography variant="h4" align="center" gutterBottom marginTop={6}>
@@ -64,6 +140,7 @@ const handleSearch = async () => {
       Search
     </Button>
     <div>
+    <input type="file" onChange={handleFileUpload} />
       {searchResults.length > 0 ? (
          <TableContainer component={Paper}>
         <Table>
@@ -130,6 +207,9 @@ const handleSearch = async () => {
           </TableBody>
         </Table>
       </TableContainer>
+      <Button variant="contained" color="primary" onClick={handleDownloadExcel}>
+        Download Excel
+      </Button>
 
   </div>
   );
